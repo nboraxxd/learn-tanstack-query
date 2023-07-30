@@ -1,11 +1,12 @@
-import { useMutation } from '@tanstack/react-query'
-import { addStudent } from 'apis/students.api'
 import { useMemo, useState } from 'react'
-import { useMatch } from 'react-router-dom'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { useLocation, useMatch, useNavigate, useParams } from 'react-router-dom'
 import { Student } from 'types/students.type'
 import { isAxiosError } from 'utils/utils'
+import { addStudent, getStudent, updateStudent } from 'apis/students.api'
+import { toast } from 'react-toastify'
 
-type FormStateType = Omit<Student, 'id'>
+type FormStateType = Omit<Student, 'id'> | Student
 type FormError =
   | {
       [key in keyof FormStateType]: string
@@ -24,56 +25,73 @@ const initialFormState: FormStateType = {
 
 export default function AddStudent() {
   const [formState, setFormState] = useState<FormStateType>(initialFormState)
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { state } = useLocation()
 
   const addMatch = useMatch('/students/add')
-  const isAddMatch = addMatch !== null
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { mutate, mutateAsync, error, data, reset } = useMutation({
+  const isAddMode = addMatch !== null
+  const addStudentMutation = useMutation({
     mutationFn: (body: FormStateType) => {
       return addStudent(body)
     },
   })
 
+  useQuery({
+    queryKey: ['student', id],
+    queryFn: () => getStudent(id as string),
+    enabled: id !== undefined,
+    onSuccess: (data) => {
+      setFormState(data.data)
+    },
+  })
+
+  const updateStudentMutation = useMutation({
+    mutationFn: (_) => updateStudent(id as string, formState as Student),
+  })
+
   const errorForm: FormError = useMemo(() => {
+    const error = isAddMode ? addStudentMutation.error : updateStudentMutation.error
+
     if (isAxiosError<{ error: FormError }>(error) && error.response?.status === 422) {
       return error.response?.data.error
     }
     return null
-  }, [error])
-
-  console.log(data)
+  }, [addStudentMutation.error, updateStudentMutation.error, isAddMode])
 
   const onChangeFormState = (ev: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = ev.target
     setFormState((prev) => ({ ...prev, [name]: value }))
-    if (data || error) {
-      reset()
+    if (addStudentMutation.data || addStudentMutation.error) {
+      addStudentMutation.reset()
     }
   }
 
   const onsubmit = async (ev: React.FormEvent<HTMLFormElement>) => {
     ev.preventDefault()
-    try {
-      await mutateAsync(formState)
-      setFormState(initialFormState)
-    } catch (error) {
-      console.log(error)
+
+    if (isAddMode) {
+      try {
+        await addStudentMutation.mutateAsync(formState)
+        setFormState(initialFormState)
+        toast.success('Add student info success')
+        navigate(`/students?page=${state.totalPage}`)
+      } catch (error) {
+        console.log(error)
+      }
+    } else {
+      updateStudentMutation.mutate(undefined, {
+        onSuccess: (_) => {
+          toast.success('Update student info success')
+          navigate(`/students?page=${state.page}`)
+        },
+      })
     }
   }
 
-  // Cách dùng mutate
-  // const onsubmit = (ev: React.FormEvent<HTMLFormElement>) => {
-  //   ev.preventDefault()
-  //   mutate(formState, {
-  //     onSuccess: () => {
-  //       setFormState(initialFormState)
-  //     },
-  //   })
-  // }
-
   return (
     <div>
-      <h1 className="text-lg">{isAddMatch ? 'Add student' : 'Edit student'}</h1>
+      <h1 className="text-lg">{isAddMode ? 'Add student' : 'Edit student'}</h1>
       <form className="mt-6" onSubmit={onsubmit}>
         <div className="group relative z-0 mb-6 w-full">
           <input
@@ -103,7 +121,7 @@ export default function AddStudent() {
                   type="radio"
                   name="gender"
                   value="male"
-                  checked={formState.gender === 'male'}
+                  checked={formState.gender.toLowerCase() === 'male'}
                   onChange={onChangeFormState}
                   className="h-4 w-4 border-gray-300 bg-gray-100 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600"
                 />
@@ -117,7 +135,7 @@ export default function AddStudent() {
                   type="radio"
                   name="gender"
                   value="female"
-                  checked={formState.gender === 'female'}
+                  checked={formState.gender.toLowerCase() === 'female'}
                   onChange={onChangeFormState}
                   className="h-4 w-4 border-gray-300 bg-gray-100 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600"
                 />
@@ -131,7 +149,7 @@ export default function AddStudent() {
                   type="radio"
                   name="gender"
                   value="other"
-                  checked={formState.gender === 'other'}
+                  checked={formState.gender.toLowerCase() === 'other'}
                   onChange={onChangeFormState}
                   className="h-4 w-4 border-gray-300 bg-gray-100 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600"
                 />
@@ -236,7 +254,7 @@ export default function AddStudent() {
           type="submit"
           className="w-full rounded-lg bg-blue-700 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 sm:w-auto"
         >
-          Submit
+          {isAddMode ? 'Add' : 'Update'}
         </button>
       </form>
     </div>

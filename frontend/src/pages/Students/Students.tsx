@@ -1,35 +1,46 @@
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { getStudents } from 'apis/students.api'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { deleteStudent, getStudents } from 'apis/students.api'
 import { useQueryString } from '../../utils/utils'
 import classNames from 'classnames'
+import { toast } from 'react-toastify'
 
 const LIMIT = 10
 export default function Students() {
   const queryString: { page?: string } = useQueryString()
   const page = Number(queryString.page || 1)
 
-  const { data, isLoading } = useQuery({
+  const studentsQuery = useQuery({
     queryKey: ['students', page],
     queryFn: () => getStudents(page, LIMIT),
-    // staleTime: 10 * 1000,
-    // cacheTime: 5 * 1000,
     keepPreviousData: true,
   })
-  const totalStudentCount = Number(data?.headers['x-total-count'] || 0)
+  const totalStudentCount = Number(studentsQuery.data?.headers['x-total-count'] || 0)
   const totalPage = Math.ceil(totalStudentCount / LIMIT)
+
+  const deleteStudentMutation = useMutation({
+    mutationFn: (id: number | string) => deleteStudent(id),
+    onSuccess: (_, id) => {
+      toast.success(`Successfully delete student with id is ${id}`)
+    },
+  })
+
+  const handleDelete = (id: number) => {
+    deleteStudentMutation.mutate(id)
+  }
 
   return (
     <div>
       <h1 className="text-lg">Students</h1>
       <Link
         to="/students/add"
+        state={{ totalPage: totalStudentCount % LIMIT === 0 ? totalPage + 1 : totalPage }}
         className="mt-6 inline-block rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300"
       >
         Add student
       </Link>
 
-      {isLoading === true && (
+      {studentsQuery.isLoading === true && (
         <div role="status" className="mt-6 animate-pulse">
           <div className="mb-4 h-4 rounded bg-gray-200 dark:bg-gray-700" />
           <div className="mb-2.5 h-10 rounded bg-gray-200 dark:bg-gray-700" />
@@ -47,14 +58,14 @@ export default function Students() {
           <span className="sr-only">Loading...</span>
         </div>
       )}
-      {isLoading === false && (
+      {studentsQuery.isLoading === false && (
         <>
           <div className="relative mt-6 overflow-x-auto shadow-md sm:rounded-lg">
             <table className="w-full text-left text-sm text-gray-500 dark:text-gray-400">
               <thead className="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
                 <tr>
                   <th scope="col" className="py-3 px-6">
-                    #
+                    ID
                   </th>
                   <th scope="col" className="py-3 px-6">
                     Avatar
@@ -71,12 +82,12 @@ export default function Students() {
                 </tr>
               </thead>
               <tbody>
-                {data?.data.map((student, index) => (
+                {studentsQuery.data?.data.map((student) => (
                   <tr
                     key={student.id}
                     className="border-b bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-600"
                   >
-                    <td className="py-4 px-6">{student.id - 5}</td>
+                    <td className="py-4 px-6">{student.id}</td>
                     <td className="py-4 px-6">
                       <img src={student.avatar} alt={student.last_name} className="h-5 w-5" />
                     </td>
@@ -86,12 +97,18 @@ export default function Students() {
                     <td className="py-4 px-6">{student.email}</td>
                     <td className="py-4 px-6 text-right">
                       <Link
-                        to="/students/1"
+                        to={`/students/${student.id}`}
+                        state={{ page }}
                         className="mr-5 font-medium text-blue-600 hover:underline dark:text-blue-500"
                       >
                         Edit
                       </Link>
-                      <button className="font-medium text-red-600 dark:text-red-500">Delete</button>
+                      <button
+                        className="font-medium text-red-600 dark:text-red-500"
+                        onClick={() => handleDelete(student.id)}
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}

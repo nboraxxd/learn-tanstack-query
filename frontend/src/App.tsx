@@ -5,38 +5,41 @@ import Dashboard from 'pages/Dashboard'
 import NotFound from 'pages/NotFound'
 import Students from 'pages/Students'
 import { useRoutes } from 'react-router-dom'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 function App() {
   const elements = useRoutes([
     {
       path: '/',
-      element: <Dashboard />
+      element: <Dashboard />,
     },
     {
       path: '/students',
-      element: <Students />
+      element: <Students />,
     },
     {
       path: '/students/:id',
-      element: <AddStudent />
+      element: <AddStudent />,
     },
     {
       path: '/students/add',
-      element: <AddStudent />
+      element: <AddStudent />,
     },
     {
       path: '/about',
-      element: <About />
+      element: <About />,
     },
     {
       path: '*',
-      element: <NotFound />
-    }
+      element: <NotFound />,
+    },
   ])
 
   return (
-    <div className='App'>
+    <div className="App">
       <MainLayout>{elements}</MainLayout>
+      <ToastContainer />
     </div>
   )
 }
