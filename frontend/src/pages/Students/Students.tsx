@@ -9,7 +9,7 @@ export default function Students() {
   const queryString: { page?: string } = useQueryString()
   const page = Number(queryString.page || 1)
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['students', page],
     queryFn: () => getStudents(page, LIMIT),
     // staleTime: 10 * 1000,
@@ -19,10 +19,16 @@ export default function Students() {
   const totalStudentCount = Number(data?.headers['x-total-count'] || 0)
   const totalPage = Math.ceil(totalStudentCount / LIMIT)
 
-  console.log('🔥 ~ isLoading ~ isFetching ~ data:', isLoading, isFetching, data?.data)
   return (
     <div>
       <h1 className="text-lg">Students</h1>
+      <Link
+        to="/students/add"
+        className="mt-6 inline-block rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300"
+      >
+        Add student
+      </Link>
+
       {isLoading === true && (
         <div role="status" className="mt-6 animate-pulse">
           <div className="mb-4 h-4 rounded bg-gray-200 dark:bg-gray-700" />
