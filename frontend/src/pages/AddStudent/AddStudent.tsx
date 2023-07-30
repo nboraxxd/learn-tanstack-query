@@ -1,10 +1,17 @@
 import { useMutation } from '@tanstack/react-query'
 import { addStudent } from 'apis/students.api'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMatch } from 'react-router-dom'
 import { Student } from 'types/students.type'
+import { isAxiosError } from 'utils/utils'
 
 type FormStateType = Omit<Student, 'id'>
+type FormError =
+  | {
+      [key in keyof FormStateType]: string
+    }
+  | null
+
 const initialFormState: FormStateType = {
   first_name: '',
   last_name: '',
@@ -20,21 +27,49 @@ export default function AddStudent() {
 
   const addMatch = useMatch('/students/add')
   const isAddMatch = addMatch !== null
-  const { mutate } = useMutation({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { mutate, mutateAsync, error, data, reset } = useMutation({
     mutationFn: (body: FormStateType) => {
       return addStudent(body)
     },
   })
 
+  const errorForm: FormError = useMemo(() => {
+    if (isAxiosError<{ error: FormError }>(error) && error.response?.status === 422) {
+      return error.response?.data.error
+    }
+    return null
+  }, [error])
+
+  console.log(data)
+
   const onChangeFormState = (ev: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = ev.target
     setFormState((prev) => ({ ...prev, [name]: value }))
+    if (data || error) {
+      reset()
+    }
   }
 
-  const onsubmit = (ev: React.FormEvent<HTMLFormElement>) => {
+  const onsubmit = async (ev: React.FormEvent<HTMLFormElement>) => {
     ev.preventDefault()
-    mutate(formState)
+    try {
+      await mutateAsync(formState)
+      setFormState(initialFormState)
+    } catch (error) {
+      console.log(error)
+    }
   }
+
+  // Cách dùng mutate
+  // const onsubmit = (ev: React.FormEvent<HTMLFormElement>) => {
+  //   ev.preventDefault()
+  //   mutate(formState, {
+  //     onSuccess: () => {
+  //       setFormState(initialFormState)
+  //     },
+  //   })
+  // }
 
   return (
     <div>
@@ -56,6 +91,7 @@ export default function AddStudent() {
           >
             Email address
           </label>
+          {errorForm && <p className="mt-1 text-xs text-red-600">{errorForm.email}</p>}
         </div>
 
         <div className="group relative z-0 mb-6 w-full">
