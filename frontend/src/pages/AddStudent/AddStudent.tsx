@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useMatch, useNavigate, useParams } from 'react-router-dom'
 import { Student } from 'types/students.type'
 import { isAxiosError } from 'utils/utils'
@@ -28,6 +28,7 @@ export default function AddStudent() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { state } = useLocation()
+  const queryClient = useQueryClient()
 
   const addMatch = useMatch('/students/add')
   const isAddMode = addMatch !== null
@@ -48,6 +49,9 @@ export default function AddStudent() {
 
   const updateStudentMutation = useMutation({
     mutationFn: (_) => updateStudent(id as string, formState as Student),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['student', id], data)
+    },
   })
 
   const errorForm: FormError = useMemo(() => {

@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { Link, useNavigate } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { deleteStudent, getStudents } from 'apis/students.api'
 import { useQueryString } from '../../utils/utils'
 import classNames from 'classnames'
@@ -9,11 +9,12 @@ const LIMIT = 10
 export default function Students() {
   const queryString: { page?: string } = useQueryString()
   const page = Number(queryString.page || 1)
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const studentsQuery = useQuery({
     queryKey: ['students', page],
     queryFn: () => getStudents(page, LIMIT),
-    keepPreviousData: true,
   })
   const totalStudentCount = Number(studentsQuery.data?.headers['x-total-count'] || 0)
   const totalPage = Math.ceil(totalStudentCount / LIMIT)
@@ -21,7 +22,12 @@ export default function Students() {
   const deleteStudentMutation = useMutation({
     mutationFn: (id: number | string) => deleteStudent(id),
     onSuccess: (_, id) => {
+      console.log(page, totalPage)
       toast.success(`Successfully delete student with id is ${id}`)
+      queryClient.invalidateQueries({ queryKey: ['students', page] })
+      if (page === totalPage && totalStudentCount % LIMIT === 1) {
+        navigate(`/students?page=${page - 1}`)
+      }
     },
   })
 
