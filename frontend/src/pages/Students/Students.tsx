@@ -14,7 +14,14 @@ export default function Students() {
 
   const studentsQuery = useQuery({
     queryKey: ['students', page],
-    queryFn: () => getStudents(page, LIMIT),
+    queryFn: ({ signal }) => {
+      const controller = new AbortController()
+      setTimeout(() => {
+        controller.abort()
+      }, 2000)
+      return getStudents(page, LIMIT, controller.signal)
+    },
+    retry: 1,
   })
   const totalStudentCount = Number(studentsQuery.data?.headers['x-total-count'] || 0)
   const totalPage = Math.ceil(totalStudentCount / LIMIT)
@@ -38,20 +45,64 @@ export default function Students() {
   const handlePrefetchStudent = (id: number) => {
     queryClient.prefetchQuery(['student', String(id)], {
       queryFn: () => getStudent(id),
-      staleTime: 1000,
+      staleTime: 3000,
     })
+  }
+
+  const fetchStudent10s = (second: number) => {
+    const id = '6'
+    queryClient.prefetchQuery(['student', id], {
+      queryFn: () => getStudent(id),
+      staleTime: second * 1000,
+    })
+  }
+
+  const refetchStudents = () => {
+    studentsQuery.refetch()
+  }
+
+  const cancelRefetchStudents = () => {
+    queryClient.cancelQueries({ queryKey: ['students', page] })
   }
 
   return (
     <div>
       <h1 className="text-lg">Students</h1>
-      <Link
-        to="/students/add"
-        state={{ totalPage: totalStudentCount % LIMIT === 0 ? totalPage + 1 : totalPage }}
-        className="mt-6 inline-block rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300"
-      >
-        Add student
-      </Link>
+      <div className="mt-6 flex">
+        <Link
+          to="/students/add"
+          state={{ totalPage: totalStudentCount % LIMIT === 0 ? totalPage + 1 : totalPage }}
+          className="inline-block rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300"
+        >
+          Add student
+        </Link>
+
+        <button
+          className="ml-3 inline-block rounded-lg bg-pink-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-pink-600 focus:outline-none focus:ring-4 focus:ring-pink-300"
+          onClick={() => fetchStudent10s(10)}
+        >
+          Click 10s
+        </button>
+        <button
+          className="ml-3 inline-block rounded-lg bg-pink-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-pink-600 focus:outline-none focus:ring-4 focus:ring-pink-300"
+          onClick={() => fetchStudent10s(2)}
+        >
+          Click 2s
+        </button>
+
+        <button
+          className="ml-3 inline-block rounded-lg bg-pink-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-pink-600 focus:outline-none focus:ring-4 focus:ring-pink-300"
+          onClick={refetchStudents}
+        >
+          Refetch students
+        </button>
+        <button
+          className="ml-3 inline-block rounded-lg bg-pink-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-pink-600 focus:outline-none focus:ring-4 focus:ring-pink-300"
+          onClick={cancelRefetchStudents}
+        >
+          Cancel refetch students
+        </button>
+      </div>
 
       {studentsQuery.isLoading === true && (
         <div role="status" className="mt-6 animate-pulse">
