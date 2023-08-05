@@ -61,9 +61,9 @@ export default function Students() {
     studentsQuery.refetch()
   }
 
-  const cancelRefetchStudents = () => {
-    queryClient.cancelQueries({ queryKey: ['students', page] })
-  }
+  // const cancelRefetchStudents = () => {
+  //   queryClient.cancelQueries({ queryKey: ['students', page] })
+  // }
 
   return (
     <div>
@@ -96,12 +96,12 @@ export default function Students() {
         >
           Refetch students
         </button>
-        <button
+        {/* <button
           className="ml-3 inline-block rounded-lg bg-pink-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-pink-600 focus:outline-none focus:ring-4 focus:ring-pink-300"
           onClick={cancelRefetchStudents}
         >
           Cancel refetch students
-        </button>
+        </button> */}
       </div>
 
       {studentsQuery.isLoading === true && (
